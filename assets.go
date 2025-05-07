@@ -37,21 +37,10 @@ func (cfg apiConfig) getAssetURL(assetPath string) string {
 	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, assetPath)
 }
 
-var allowedExtensions = map[string]bool{
-	".png":  true,
-	".jpg":  true,
-	".jpeg": true,
-	".webp": true,
-}
-
 func mediaTypeToExt(mediaType string) string {
 	parts := strings.Split(mediaType, "/")
 	if len(parts) != 2 {
 		return ".bin"
 	}
-	ext := "." + parts[1]
-	if !allowedExtensions[ext] {
-		return ".bin"
-	}
-	return ext
+	return "." + parts[1]
 }
