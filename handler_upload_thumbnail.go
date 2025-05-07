@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -50,22 +48,12 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusBadRequest, "Missing Content-Type for thumbnail", nil)
 	}
 
-	exts, err := mime.ExtensionsByType(mediaType)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to determine file type", err)
-		return
-	}
-	if len(exts) == 0 {
-		respondWithError(w, http.StatusBadRequest, "Unknown file extension", err)
-		return
-	}
+	assetPath := getAssetPath(videoID, mediaType)
+	diskPath := cfg.getAssetDiskPath(assetPath)
 
 	// TODO: allowlist extension types for security
 
-	fileName := videoID.String() + exts[0]
-	thumbPath := filepath.Join(cfg.assetsRoot, fileName)
-
-	dstFile, err := os.Create(thumbPath)
+	dstFile, err := os.Create(diskPath)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error creating file", err)
 		return
@@ -74,7 +62,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	_, err = io.Copy(dstFile, uploadFile)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to copy image data", err)
+		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
 		return
 	}
 
@@ -88,9 +76,9 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	dataURL := fmt.Sprintf("http://localhosts:%s/assets/%s", cfg.port, fileName)
+	url := cfg.getAssetURL(assetPath)
 
-	video.ThumbnailURL = &dataURL
+	video.ThumbnailURL = &url
 
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
